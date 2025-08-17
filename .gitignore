@@ -1,0 +1,35 @@
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+*.ijs
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyo
+*.egg-info/
+*.egg
+*.so
+*.dll
+*.exe
+*.pyd
+*.pyw
+*.py
+
+# Virtual environments
+env/
+venv/
+.venv/
+virtualenv/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.whl
+*.tar.gz
+*.zip
