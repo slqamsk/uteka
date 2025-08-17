@@ -1,0 +1,135 @@
+// Единый каталог, объединяющий все репозитории и предоставляющий удобный интерфейс
+// для доступа к данным и выполнения клинических операций.
+class Medication_Catalog {
+    // Все репозитории внедряются извне (инъекция зависимостей)
+    Manufacturer_Repository manufacturer_repo
+    DrugClass_Repository drug_class_repo
+    Ingredient_Repository ingredient_repo
+    Ingredient_DrugClass_Repository ingredient_drug_class_repo
+    DosageForm_Repository dosage_form_repo
+    RouteOfAdministration_Repository route_repo
+    Unit_Repository unit_repo
+    Drug_Repository drug_repo
+    Drug_Ingredient_Repository drug_ingredient_repo
+
+    // Конструктор: принимает все репозитории
+    constructor(
+        manufacturer_repo: Manufacturer_Repository,
+        drug_class_repo: DrugClass_Repository,
+        ingredient_repo: Ingredient_Repository,
+        ingredient_drug_class_repo: Ingredient_DrugClass_Repository,
+        dosage_form_repo: DosageForm_Repository,
+        route_repo: RouteOfAdministration_Repository,
+        unit_repo: Unit_Repository,
+        drug_repo: Drug_Repository,
+        drug_ingredient_repo: Drug_Ingredient_Repository
+    ) {
+        this.manufacturer_repo = manufacturer_repo
+        this.drug_class_repo = drug_class_repo
+        this.ingredient_repo = ingredient_repo
+        this.ingredient_drug_class_repo = ingredient_drug_class_repo
+        this.dosage_form_repo = dosage_form_repo
+        this.route_repo = route_repo
+        this.unit_repo = unit_repo
+        this.drug_repo = drug_repo
+        this.drug_ingredient_repo = drug_ingredient_repo
+    }
+
+    // === Удобные методы доступа к данным ===
+
+    getManufacturerById(id: int): Manufacturer
+        // Возвращает производителя по id
+        return manufacturer_repo.findById(id)
+
+    getDrugClassById(id: int): DrugClass
+        // Возвращает терапевтическую группу по id
+        return drug_class_repo.findById(id)
+
+    getIngredientById(id: int): Ingredient
+        // Возвращает вещество по id
+        return ingredient_repo.findById(id)
+
+    getIngredientByName(name: String): Ingredient
+        // Находит вещество по названию (регистронезависимо)
+        return ingredient_repo.findByName(name)
+
+    getDosageFormById(id: int): DosageForm
+        // Возвращает лекарственную форму по id
+        return dosage_form_repo.findById(id)
+
+    getDosageFormByName(name: String): DosageForm
+        // Находит форму по названию
+        return dosage_form_repo.findByName(name)
+
+    getUnitById(id: int): Unit
+        // Возвращает единицу измерения по id
+        return unit_repo.findById(id)
+
+    getUnitByCode(code: String): Unit
+        // Находит единицу по коду (например, "mg", "mL")
+        return unit_repo.findByCode(code)
+
+    getDrugById(id: int): Drug
+        // Возвращает препарат по id
+        return drug_repo.findById(id)
+
+    // === Методы для работы с классификациями ===
+
+    getDrugClassesForIngredient(ingredient: Ingredient): List<DrugClass>
+        // Возвращает все терапевтические группы, к которым относится вещество
+        return ingredient_drug_class_repo
+            .findByIngredient(ingredient)
+            .map(link → link.drugClass)
+
+    getIngredientsForDrugClass(drugClass: DrugClass): List<Ingredient>
+        // Возвращает все вещества, входящие в указанную терапевтическую группу
+        return ingredient_drug_class_repo
+            .findByDrugClass(drugClass)
+            .map(link → link.ingredient)
+
+    // === Методы для работы с составом препаратов ===
+
+    getComposition(drug: Drug): List<Drug_Ingredient>
+        // Возвращает состав препарата: какие вещества и в какой дозе
+        return drug_ingredient_repo.findByDrug(drug)
+
+    getDrugsContaining(ingredient: Ingredient): List<Drug>
+        // Возвращает все препараты, содержащие указанное вещество
+        return drug_ingredient_repo
+            .findByIngredient(ingredient)
+            .map(link → link.drug)
+
+    getStrength(drug: Drug, ingredient: Ingredient): (Double, Unit)
+        // Возвращает дозу указанного вещества в препарате
+        // Например: (500, "мг")
+        link = drug_ingredient_repo.findByDrugAndIngredient(drug, ingredient)
+        return (link.strength, link.unit) if link else null
+
+    // === Методы для конвертации и сравнения доз ===
+
+    convertDose(value: Double, fromUnit: Unit, toUnit: Unit): Double
+        // Конвертирует значение из одной единицы в другую
+        return unit_repo.convert(value, fromUnit, toUnit)
+
+    canConvertUnits(fromUnit: Unit, toUnit: Unit): Boolean
+        // Проверяет, можно ли конвертировать единицы (по типу: масса, объём и т.п.)
+        return unit_repo.canConvert(fromUnit, toUnit)
+
+    // === Общие списки ===
+
+    getAllDrugs(): List<Drug>
+        // Возвращает все препараты
+        return drug_repo.getAll()
+
+    getAllIngredients(): List<Ingredient>
+        // Возвращает все действующие вещества
+        return ingredient_repo.getAll()
+
+    getAllDrugClasses(): List<DrugClass>
+        // Возвращает все терапевтические группы
+        return drug_class_repo.getAll()
+
+    getAllUnits(): List<Unit>
+        // Возвращает все единицы измерения
+        return unit_repo.getAll()
+}

@@ -1,0 +1,601 @@
+Содержимое файла README.md:
+--------------------------------------------------
+# uteka
+Система заказа препаратов в аптеках, ближайших к дому
+
+
+Содержимое файла catalog\medication_catalog.py:
+--------------------------------------------------
+from typing import List
+from ..models import Ingredient, Drug, Unit, TargetDose
+from ..repositories import (
+    Manufacturer_Repository,
+    DrugClass_Repository,
+    Ingredient_Repository,
+    Ingredient_DrugClass_Repository,
+    DosageForm_Repository,
+    RouteOfAdministration_Repository,
+    Unit_Repository,
+    Drug_Repository,
+    Drug_Ingredient_Repository
+)
+
+"""
+Единый каталог, объединяющий все репозитории и предоставляющий удобный интерфейс.
+"""
+
+class Medication_Catalog:
+    """
+    Единый каталог, объединяющий все репозитории и предоставляющий удобный интерфейс
+    для доступа к данным и выполнения клинических операций.
+    """
+    def __init__(
+        self,
+        manufacturer_repo: Manufacturer_Repository,
+        drug_class_repo: DrugClass_Repository,
+        ingredient_repo: Ingredient_Repository,
+        ingredient_drug_class_repo: Ingredient_DrugClass_Repository,
+        dosage_form_repo: DosageForm_Repository,
+        route_repo: RouteOfAdministration_Repository,
+        unit_repo: Unit_Repository,
+        drug_repo: Drug_Repository,
+        drug_ingredient_repo: Drug_Ingredient_Repository
+    ):
+        self.manufacturer_repo = manufacturer_repo
+        self.drug_class_repo = drug_class_repo
+        self.ingredient_repo = ingredient_repo
+        self.ingredient_drug_class_repo = ingredient_drug_class_repo
+        self.dosage_form_repo = dosage_form_repo
+        self.route_repo = route_repo
+        self.unit_repo = unit_repo
+        self.drug_repo = drug_repo
+        self.drug_ingredient_repo = drug_ingredient_repo
+
+    def get_drugs_containing(self, ingredient: Ingredient) -> List[Drug]:
+        # Возвращает все препараты, содержащие указанное вещество
+        links = self.drug_ingredient_repo.find_by_ingredient(ingredient)
+        return [link.drug for link in links]
+
+    def get_strength(self, drug: Drug, ingredient: Ingredient) -> tuple[Optional[float], Optional[Unit]]:
+        # Возвращает дозу вещества в препарате
+        link = self.drug_ingredient_repo.find_by_drug_and_ingredient(drug, ingredient)
+        if link:
+            return (link.strength, link.unit)
+        return (None, None)
+
+    def convert_dose(self, value: float, from_unit: Unit, to_unit: Unit) -> float:
+        # Конвертирует дозу между единицами
+        if self.unit_repo.can_convert(from_unit, to_unit):
+            return self.unit_repo.convert(value, from_unit, to_unit)
+        raise ValueError(f"Cannot convert {{from_unit.code}} to {{to_unit.code}}")
+
+
+Содержимое файла catalog\__init__.py:
+--------------------------------------------------
+
+
+Содержимое файла models\dosage_form.py:
+--------------------------------------------------
+"""
+Лекарственная форма (dosage form) — физическое состояние препарата. Определяет способ применения, биодоступность и путь введения.
+"""
+
+class DosageForm:
+    """
+    Лекарственная форма (dosage form) — физическое состояние препарата. Определяет способ применения, биодоступность и путь введения.
+    """
+    def __init__(self, id: int, name: str, code: str, category: str, route_of_administration: RouteOfAdministration):
+        self.id = id
+        self.name = name
+        self.code = code
+        self.category = category
+        self.route_of_administration = route_of_administration
+
+    def __repr__(self):
+        return f'<DosageForm {self.id}>'
+
+
+Содержимое файла models\drug.py:
+--------------------------------------------------
+"""
+Лекарственное средство — торговый препарат с указанием формы и производителя.
+"""
+
+class Drug:
+    """
+    Лекарственное средство — торговый препарат с указанием формы и производителя.
+    """
+    def __init__(self, id: int, name: str, dosage_form: DosageForm, manufacturer: Manufacturer):
+        self.id = id
+        self.name = name
+        self.dosage_form = dosage_form
+        self.manufacturer = manufacturer
+
+    def __repr__(self):
+        return f'<Drug {self.id}>'
+
+
+Содержимое файла models\drug_class.py:
+--------------------------------------------------
+"""
+Терапевтическая или фармакологическая группа, к которой может относиться действующее вещество.
+"""
+
+class DrugClass:
+    """
+    Терапевтическая или фармакологическая группа, к которой может относиться действующее вещество.
+    """
+    def __init__(self, id: int, name: str, description: str):
+        self.id = id
+        self.name = name
+        self.description = description
+
+    def __repr__(self):
+        return f'<DrugClass {self.id}>'
+
+
+Содержимое файла models\drug_ingredient.py:
+--------------------------------------------------
+"""
+Описывает включение действующего вещества в состав препарата. Один препарат может содержать несколько веществ, одно вещество — в нескольких препаратах.
+"""
+
+class Drug_Ingredient:
+    """
+    Описывает включение действующего вещества в состав препарата. Один препарат может содержать несколько веществ, одно вещество — в нескольких препаратах.
+    """
+    def __init__(self, drug: Drug, ingredient: Ingredient, strength: float, unit: Unit):
+        self.drug = drug
+        self.ingredient = ingredient
+        self.strength = strength
+        self.unit = unit
+
+    def __repr__(self):
+        return f'<Drug_Ingredient {self.id}>'
+
+
+Содержимое файла models\ingredient.py:
+--------------------------------------------------
+"""
+Действующее вещество (active pharmaceutical ingredient, API), обладающее фармакологической активностью.
+"""
+
+class Ingredient:
+    """
+    Действующее вещество (active pharmaceutical ingredient, API), обладающее фармакологической активностью.
+    """
+    def __init__(self, id: int, name: str, description: str):
+        self.id = id
+        self.name = name
+        self.description = description
+
+    def __repr__(self):
+        return f'<Ingredient {self.id}>'
+
+
+Содержимое файла models\ingredient_drug_class.py:
+--------------------------------------------------
+"""
+Связывает действующее вещество с терапевтической группой. Позволяет одному веществу относиться к нескольким группам.
+"""
+
+class Ingredient_DrugClass:
+    """
+    Связывает действующее вещество с терапевтической группой. Позволяет одному веществу относиться к нескольким группам.
+    """
+    def __init__(self, ingredient: Ingredient, drug_class: DrugClass, role: str, evidence_level: str):
+        self.ingredient = ingredient
+        self.drug_class = drug_class
+        self.role = role
+        self.evidence_level = evidence_level
+
+    def __repr__(self):
+        return f'<Ingredient_DrugClass {self.id}>'
+
+
+Содержимое файла models\manufacturer.py:
+--------------------------------------------------
+"""
+Производитель лекарственного средства (фармацевтическая компания)
+"""
+
+class Manufacturer:
+    """
+    Производитель лекарственного средства (фармацевтическая компания)
+    """
+    def __init__(self, id: int, name: str, country: str):
+        self.id = id
+        self.name = name
+        self.country = country
+
+    def __repr__(self):
+        return f'<Manufacturer {self.id}>'
+
+
+Содержимое файла models\route_of_administration.py:
+--------------------------------------------------
+"""
+Путь введения лекарства (например, перорально, внутривенно). Используется для связи с лекарственной формой и клинической логикой.
+"""
+
+class RouteOfAdministration:
+    """
+    Путь введения лекарства (например, перорально, внутривенно). Используется для связи с лекарственной формой и клинической логикой.
+    """
+    def __init__(self, id: int, name: str, code: str, description: str):
+        self.id = id
+        self.name = name
+        self.code = code
+        self.description = description
+
+    def __repr__(self):
+        return f'<RouteOfAdministration {self.id}>'
+
+
+Содержимое файла models\target_dose.py:
+--------------------------------------------------
+"""
+Целевая доза — требуемое количество действующего вещества в день. Используется как входной параметр при подборе комбинаций лекарств.
+"""
+
+class TargetDose:
+    """
+    Целевая доза — требуемое количество действующего вещества в день. Используется как входной параметр при подборе комбинаций лекарств.
+    """
+    def __init__(self, ingredient: Ingredient, amount: float, unit: Unit):
+        self.ingredient = ingredient
+        self.amount = amount
+        self.unit = unit
+
+    def __repr__(self):
+        return f'<TargetDose {self.id}>'
+
+
+Содержимое файла models\unit.py:
+--------------------------------------------------
+"""
+Единица измерения дозы (мг, мл, МЕ и т.п.) с поддержкой стандартов и конвертации.
+"""
+
+class Unit:
+    """
+    Единица измерения дозы (мг, мл, МЕ и т.п.) с поддержкой стандартов и конвертации.
+    """
+    def __init__(self, id: int, name: str, code: str, type: str, base_unit: Unit, conversion_factor: float):
+        self.id = id
+        self.name = name
+        self.code = code
+        self.type = type
+        self.base_unit = base_unit
+        self.conversion_factor = conversion_factor
+
+    def __repr__(self):
+        return f'<Unit {self.id}>'
+
+
+Содержимое файла models\__init__.py:
+--------------------------------------------------
+
+
+Содержимое файла repositories\dosage_form_repository.py:
+--------------------------------------------------
+from ..models import DosageForm
+from typing import List, Optional
+
+"""
+Репозиторий: DosageForm_Repository
+"""
+
+class DosageForm_Repository:
+    """
+    Репозиторий для управления dosageform repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, form: DosageForm) -> None:
+        # Добавляет форму в хранилище и в индекс
+        pass
+
+    def find_by_id(self, id: int) -> DosageForm:
+        # Возвращает форму по id
+        return None
+
+    def find_by_name(self, name: str) -> DosageForm:
+        # Находит форму по названию
+        return None
+
+    def get_all(self, ) -> list[DosageForm]:
+        # Возвращает все формы
+        return []
+
+
+
+Содержимое файла repositories\drug_class_repository.py:
+--------------------------------------------------
+from ..models import DrugClass
+from typing import List, Optional
+
+"""
+Репозиторий: DrugClass_Repository
+"""
+
+class DrugClass_Repository:
+    """
+    Репозиторий для управления drugclass repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, drug_class: DrugClass) -> None:
+        # Добавляет группу в хранилище
+        pass
+
+    def find_by_id(self, id: int) -> DrugClass:
+        # Возвращает группу по id
+        return None
+
+    def get_all(self, ) -> list[DrugClass]:
+        # Возвращает все терапевтические группы
+        return []
+
+
+
+Содержимое файла repositories\drug_ingredient_repository.py:
+--------------------------------------------------
+from ..models import Drug_Ingredient, Drug, Ingredient
+from typing import List, Optional
+
+"""
+Репозиторий: Drug_Ingredient_Repository
+"""
+
+class Drug_Ingredient_Repository:
+    """
+    Репозиторий для управления drug ingredient repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, link: Drug_Ingredient) -> None:
+        # Добавляет запись о вхождении вещества в препарат
+        pass
+
+    def remove(self, link: Drug_Ingredient) -> None:
+        # Удаляет запись
+        pass
+
+    def find_by_drug(self, drug: Drug) -> list[Drug_Ingredient]:
+        # Все вещества в препарате (с дозировкой)
+        return []
+
+    def find_by_ingredient(self, ingredient: Ingredient) -> list[Drug_Ingredient]:
+        # Все препараты с веществом
+        return []
+
+    def find_by_drug_and_ingredient(self, drug: Drug, ingredient: Ingredient) -> Drug_Ingredient:
+        # Конкретное вхождение
+        return None
+
+    def get_all(self, ) -> list[Drug_Ingredient]:
+        # Возвращает все записи состава
+        return []
+
+
+
+Содержимое файла repositories\drug_repository.py:
+--------------------------------------------------
+from ..models import Drug
+from typing import List, Optional
+
+"""
+Репозиторий: Drug_Repository
+"""
+
+class Drug_Repository:
+    """
+    Репозиторий для управления drug repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, drug: Drug) -> None:
+        # Добавляет препарат в хранилище
+        pass
+
+    def find_by_id(self, id: int) -> Drug:
+        # Возвращает препарат по id
+        return None
+
+    def get_all(self, ) -> list[Drug]:
+        # Возвращает все препараты
+        return []
+
+
+
+Содержимое файла repositories\ingredient_drug_class_repository.py:
+--------------------------------------------------
+from ..models import Ingredient_DrugClass, Ingredient, DrugClass
+from typing import List, Optional
+
+"""
+Репозиторий: Ingredient_DrugClass_Repository
+"""
+
+class Ingredient_DrugClass_Repository:
+    """
+    Репозиторий для управления ingredient drugclass repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, link: Ingredient_DrugClass) -> None:
+        # Добавляет связь 'вещество ↔ группа'
+        pass
+
+    def remove(self, link: Ingredient_DrugClass) -> None:
+        # Удаляет связь
+        pass
+
+    def find_by_ingredient(self, ingredient: Ingredient) -> list[Ingredient_DrugClass]:
+        # Все связи для заданного вещества
+        return []
+
+    def find_by_drug_class(self, drug_class: DrugClass) -> list[Ingredient_DrugClass]:
+        # Все связи для заданной терапевтической группы
+        return []
+
+    def find_by_ingredient_and_class(self, ingredient: Ingredient, drug_class: DrugClass) -> Ingredient_DrugClass:
+        # Конкретная связь
+        return None
+
+    def get_all(self, ) -> list[Ingredient_DrugClass]:
+        # Возвращает все связи
+        return []
+
+
+
+Содержимое файла repositories\ingredient_repository.py:
+--------------------------------------------------
+from ..models import Ingredient
+from typing import List, Optional
+
+"""
+Репозиторий: Ingredient_Repository
+"""
+
+class Ingredient_Repository:
+    """
+    Репозиторий для управления ingredient repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, ingredient: Ingredient) -> None:
+        # Добавляет вещество в хранилище
+        pass
+
+    def find_by_id(self, id: int) -> Ingredient:
+        # Находит вещество по id
+        return None
+
+    def find_by_name(self, name: str) -> Ingredient:
+        # Находит вещество по названию (регистронезависимо)
+        return None
+
+    def get_all(self, ) -> list[Ingredient]:
+        # Возвращает все вещества
+        return []
+
+
+
+Содержимое файла repositories\manufacturer_repository.py:
+--------------------------------------------------
+from ..models import Manufacturer
+from typing import List, Optional
+
+"""
+Репозиторий: Manufacturer_Repository
+"""
+
+class Manufacturer_Repository:
+    """
+    Репозиторий для управления manufacturer repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, manufacturer: Manufacturer) -> None:
+        # Добавляет производителя в хранилище
+        pass
+
+    def find_by_id(self, id: int) -> Manufacturer:
+        # Возвращает производителя по id или None
+        return None
+
+    def get_all(self, ) -> list[Manufacturer]:
+        # Возвращает полный список производителей
+        return []
+
+
+
+Содержимое файла repositories\route_of_administration_repository.py:
+--------------------------------------------------
+from ..models import RouteOfAdministration
+from typing import List, Optional
+
+"""
+Репозиторий: RouteOfAdministration_Repository
+"""
+
+class RouteOfAdministration_Repository:
+    """
+    Репозиторий для управления routeofadministration repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, route: RouteOfAdministration) -> None:
+        # Добавляет путь введения
+        pass
+
+    def find_by_id(self, id: int) -> RouteOfAdministration:
+        # Возвращает путь по id
+        return None
+
+    def get_all(self, ) -> list[RouteOfAdministration]:
+        # Возвращает все пути введения
+        return []
+
+
+
+Содержимое файла repositories\unit_repository.py:
+--------------------------------------------------
+from ..models import Unit
+from typing import List, Optional
+
+"""
+Репозиторий: Unit_Repository
+"""
+
+class Unit_Repository:
+    """
+    Репозиторий для управления unit repository.
+    """
+    def __init__(self):
+        self._items = []
+
+    def add(self, unit: Unit) -> None:
+        # Добавляет единицу и индексирует по коду
+        pass
+
+    def find_by_id(self, id: int) -> Unit:
+        # Возвращает единицу по id
+        return None
+
+    def find_by_code(self, code: str) -> Unit:
+        # Находит единицу по коду UCUM
+        return None
+
+    def get_all(self, ) -> list[Unit]:
+        # Возвращает все единицы
+        return []
+
+    def convert(self, value: float, from_unit: Unit, to_unit: Unit) -> float:
+        # Конвертирует значение между единицами
+        return 0.0
+
+    def can_convert(self, from_unit: Unit, to_unit: Unit) -> bool:
+        # Проверяет, можно ли конвертировать (по типу)
+        return False
+
+
+
+Содержимое файла repositories\__init__.py:
+--------------------------------------------------
+
+
+Содержимое файла solver\__init__.py:
+--------------------------------------------------
+
+

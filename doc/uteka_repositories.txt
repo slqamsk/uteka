@@ -1,0 +1,93 @@
+// Репозиторий для управления производителями
+class Manufacturer_Repository {
+    private List<Manufacturer> manufacturers
+
+    add(manufacturer: Manufacturer): void          // Добавляет производителя в хранилище
+    findById(id: int): Manufacturer                // Возвращает производителя по id или null
+    getAll(): List<Manufacturer>                   // Возвращает полный список производителей
+}
+
+// Репозиторий для управления терапевтическими группами
+class DrugClass_Repository {
+    private List<DrugClass> drugClasses
+
+    add(drugClass: DrugClass): void                // Добавляет группу в хранилище
+    findById(id: int): DrugClass                   // Возвращает группу по id
+    getAll(): List<DrugClass>                      // Возвращает все терапевтические группы
+}
+
+// Репозиторий для управления действующими веществами
+class Ingredient_Repository {
+    private List<Ingredient> ingredients
+
+    add(ingredient: Ingredient): void              // Добавляет вещество в хранилище
+    findById(id: int): Ingredient                  // Находит вещество по id
+    findByName(name: String): Ingredient           // Находит вещество по названию (регистронезависимо)
+    getAll(): List<Ingredient>                     // Возвращает все вещества
+}
+
+// Репозиторий для управления связями между действующими веществами и терапевтическими группами
+class Ingredient_DrugClass_Repository {
+    private List<Ingredient_DrugClass> links
+
+    add(link: Ingredient_DrugClass): void          // Добавляет связь "вещество ↔ группа"
+    remove(link: Ingredient_DrugClass): void       // Удаляет связь
+    findByIngredient(ingredient: Ingredient): List<Ingredient_DrugClass>  // Все связи для вещества
+    findByDrugClass(drugClass: DrugClass): List<Ingredient_DrugClass>    // Все связи для группы
+    findByIngredientAndClass(ingredient: Ingredient, drugClass: DrugClass): Ingredient_DrugClass  // Конкретная связь
+    getAll(): List<Ingredient_DrugClass>           // Возвращает все связи
+}
+
+// Репозиторий для управления лекарственными формами
+class DosageForm_Repository {
+    private List<DosageForm> dosageForms
+    private Map<String, DosageForm> formsByName    // Индекс: имя формы → объект, для быстрого поиска
+
+    add(form: DosageForm): void                    // Добавляет форму в хранилище и в индекс
+    findById(id: int): DosageForm                  // Возвращает форму по id
+    findByName(name: String): DosageForm           // Находит форму по названию
+    getAll(): List<DosageForm>                     // Возвращает все формы
+}
+
+// Репозиторий для управления путями введения
+class RouteOfAdministration_Repository {
+    private List<RouteOfAdministration> routes
+
+    add(route: RouteOfAdministration): void        // Добавляет путь введения
+    findById(id: int): RouteOfAdministration       // Возвращает путь по id
+    getAll(): List<RouteOfAdministration>          // Возвращает все пути введения
+}
+
+// Репозиторий для управления единицами измерения
+class Unit_Repository {
+    private List<Unit> units
+    private Map<String, Unit> unitsByCode          // Индекс: код (например, "mg") → объект Unit
+
+    add(unit: Unit): void                          // Добавляет единицу и индексирует по коду
+    findById(id: int): Unit                        // Возвращает единицу по id
+    findByCode(code: String): Unit                 // Находит единицу по коду UCUM
+    getAll(): List<Unit>                           // Возвращает все единицы
+    convert(value: Double, fromUnit: Unit, toUnit: Unit): Double  // Конвертирует значение между единицами
+    canConvert(from: Unit, to: Unit): Boolean      // Проверяет, можно ли конвертировать (по типу)
+}
+
+// Репозиторий для управления лекарственными средствами
+class Drug_Repository {
+    private List<Drug> drugs
+
+    add(drug: Drug): void                          // Добавляет препарат в хранилище
+    findById(id: int): Drug                        // Возвращает препарат по id
+    getAll(): List<Drug>                           // Возвращает все препараты
+}
+
+// Репозиторий для управления составом лекарств (связь препарат — вещество — доза)
+class Drug_Ingredient_Repository {
+    private List<Drug_Ingredient> links
+
+    add(link: Drug_Ingredient): void               // Добавляет запись о вхождении вещества в препарат
+    remove(link: Drug_Ingredient): void            // Удаляет запись
+    findByDrug(drug: Drug): List<Drug_Ingredient>  // Все вещества в препарате (с дозировкой)
+    findByIngredient(ingredient: Ingredient): List<Drug_Ingredient>  // Все препараты с веществом
+    findByDrugAndIngredient(drug: Drug, ingredient: Ingredient): Drug_Ingredient  // Конкретное вхождение
+    getAll(): List<Drug_Ingredient>                // Возвращает все записи состава
+}
